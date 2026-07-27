@@ -1,6 +1,6 @@
 {% extends "video_processor/base.html" %}
 
-{% block title %}Recall AI | Search Hub{% endblock %}
+{% block title %}Recall AI | Ask Your Vault{% endblock %}
 
 {% block topbar %}
 {% include "video_processor/includes/topbar.html" %}
@@ -9,8 +9,8 @@
 {% block content %}
 <header class="flex justify-between items-center mb-xl">
     <div>
-        <h1 class="text-headline-xl text-primary tracking-tight">Search Hub</h1>
-        <p class="text-on-surface-variant text-body-lg">Access your collective memory with semantic AI.</p>
+        <h1 class="text-headline-xl text-primary tracking-tight">Ask Your Vault</h1>
+        <p class="text-on-surface-variant text-body-lg">Search and ask natural-language questions across your uploaded content.</p>
     </div>
 </header>
 
@@ -27,10 +27,11 @@
                 <button type="button" class="mode-btn px-md py-xs rounded-full text-label-md font-semibold bg-primary text-on-primary" data-mode="hybrid">Smart</button>
                 <button type="button" class="mode-btn px-md py-xs rounded-full text-label-md font-semibold bg-surface-container-high text-on-surface-variant hover:text-primary" data-mode="semantic">AI</button>
                 <button type="button" class="mode-btn px-md py-xs rounded-full text-label-md font-semibold bg-surface-container-high text-on-surface-variant hover:text-primary" data-mode="keyword">Keyword</button>
+                <button type="button" class="mode-btn px-md py-xs rounded-full text-label-md font-semibold bg-surface-container-high text-on-surface-variant hover:text-primary" data-mode="ask">Ask</button>
             </div>
             <input id="searchQuery" type="text"
                    class="w-full bg-transparent border-none focus:ring-0 text-headline-md placeholder:text-outline-variant p-0"
-                   placeholder="Describe a moment or keyword from your videos..." autocomplete="off">
+                   placeholder="Ask a question or describe something from your content..." autocomplete="off">
         </div>
         <button id="searchButton" type="button"
                 class="bg-primary text-on-primary px-lg py-sm rounded-lg font-bold flex items-center justify-center gap-xs hover:opacity-90 transition-opacity shrink-0 m-sm sm:m-0">
@@ -42,6 +43,17 @@
         <button type="button" class="example-query px-md py-xs bg-surface-container-high text-on-surface-variant rounded-full text-label-md font-semibold hover:bg-primary hover:text-on-primary transition-all whitespace-nowrap">relationship advice</button>
         <button type="button" class="example-query px-md py-xs bg-surface-container-high text-on-surface-variant rounded-full text-label-md font-semibold hover:bg-primary hover:text-on-primary transition-all whitespace-nowrap">personal growth</button>
         <button type="button" class="example-query px-md py-xs bg-surface-container-high text-on-surface-variant rounded-full text-label-md font-semibold hover:bg-primary hover:text-on-primary transition-all whitespace-nowrap">productivity tips</button>
+    </div>
+</section>
+
+<section id="answerSection" class="max-w-5xl mx-auto hidden mb-xl">
+    <div class="luminous-card rounded-xl p-lg">
+        <h3 class="text-headline-md text-primary mb-sm">Answer</h3>
+        <p id="answerText" class="text-body-lg text-on-surface whitespace-pre-line"></p>
+    </div>
+    <div class="mt-md">
+        <h4 class="text-label-lg font-bold text-on-surface-variant uppercase tracking-wider mb-sm">Sources</h4>
+        <div id="answerSources" class="grid gap-sm"></div>
     </div>
 </section>
 
@@ -89,6 +101,12 @@ async function performSearch() {
     const query = document.getElementById('searchQuery').value.trim();
     if (!query) return;
 
+    if (currentMode === 'ask') {
+        return performAsk(query);
+    }
+
+    document.getElementById('answerSection').classList.add('hidden');
+
     const searchButton = document.getElementById('searchButton');
     const resultsSection = document.getElementById('resultsSection');
     const resultsGrid = document.getElementById('resultsGrid');
@@ -98,7 +116,7 @@ async function performSearch() {
     searchButton.disabled = true;
     searchButton.textContent = 'Searching...';
     resultsSection.classList.remove('hidden');
-    resultsGrid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center text-on-surface-variant">Searching through your videos...</div>';
+    resultsGrid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center text-on-surface-variant">Searching your vault...</div>';
 
     try {
         const response = await fetch('/api/search/', {
@@ -117,23 +135,29 @@ async function performSearch() {
             resultsGrid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center"><h3 class="text-headline-md text-primary mb-sm">No results found</h3><p class="text-on-surface-variant">Try different keywords or switch search modes.</p></div>';
         } else {
             resultsGrid.innerHTML = data.results.map(result => {
-                const score = result.relevance_score ? Math.round(result.relevance_score * 100) : null;
+                const score = formatMatchPercent(result);
+                const isDoc = result.content_kind === 'document';
+                const icon = isDoc ? 'description' : 'play_circle';
+                const pageArg = result.page != null ? result.page : 'null';
                 return `
                 <div class="luminous-card rounded-xl overflow-hidden flex flex-col md:flex-row group hover:border-primary/20 transition-all p-md gap-md">
                     <div class="md:w-48 h-32 bg-surface-container rounded-lg flex items-center justify-center shrink-0 relative">
-                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">play_circle</span>
+                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">${icon}</span>
                         ${score ? `<span class="absolute top-2 right-2 px-2 py-0.5 bg-primary text-on-primary text-label-md font-bold rounded">${score}% MATCH</span>` : ''}
                     </div>
                     <div class="flex-1 flex flex-col justify-between">
                         <div>
-                            <h4 class="text-body-lg font-bold text-primary mb-xs">${result.video_name}</h4>
+                            <div class="flex items-center gap-sm mb-xs flex-wrap">
+                                <h4 class="text-body-lg font-bold text-primary">${result.video_name || result.title}</h4>
+                                <span class="text-label-md text-on-surface-variant uppercase">${result.content_kind || 'video'}</span>
+                            </div>
                             <p class="text-on-surface-variant text-body-sm line-clamp-2 italic border-l-2 border-outline-variant/30 pl-sm">${result.text}</p>
                         </div>
                         <div class="flex items-center justify-between mt-sm">
-                            <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time})"
+                            <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time || 0}, ${pageArg})"
                                     class="text-primary font-bold hover:underline flex items-center gap-xs">
-                                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                ${formatTime(result.start_time)}
+                                <span class="material-symbols-outlined text-[18px]">${isDoc ? 'menu_book' : 'play_arrow'}</span>
+                                ${locatorLabel(result)}
                             </button>
                         </div>
                     </div>
@@ -142,6 +166,55 @@ async function performSearch() {
         }
     } catch (error) {
         resultsGrid.innerHTML = `<div class="rounded-xl p-md alert-error">${error.message}</div>`;
+    } finally {
+        searchButton.disabled = false;
+        searchButton.textContent = 'Search';
+    }
+}
+
+async function performAsk(question) {
+    const searchButton = document.getElementById('searchButton');
+    const answerSection = document.getElementById('answerSection');
+    const answerText = document.getElementById('answerText');
+    const answerSources = document.getElementById('answerSources');
+
+    document.getElementById('resultsSection').classList.add('hidden');
+    searchButton.disabled = true;
+    searchButton.textContent = 'Thinking...';
+    answerSection.classList.remove('hidden');
+    answerText.textContent = 'Reading your content...';
+    answerSources.innerHTML = '';
+
+    try {
+        const username = typeof publicSearchUsername !== 'undefined' ? publicSearchUsername : '';
+        const response = await fetch('/api/ask/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ question, username })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Ask failed');
+
+        answerText.textContent = data.answer;
+        answerSources.innerHTML = data.sources.map(source => {
+            const isDoc = source.content_kind === 'document';
+            const pageArg = source.page != null ? source.page : 'null';
+            const start = source.start_time != null ? source.start_time : 0;
+            return `
+            <div class="luminous-card rounded-xl p-md flex items-start gap-md">
+                <span class="px-2 py-0.5 bg-primary/10 text-primary rounded text-label-md font-bold shrink-0">[${source.ref}]</span>
+                <div class="flex-1">
+                    <p class="text-body-sm text-on-surface-variant line-clamp-2 italic mb-xs">${source.text}</p>
+                    <button type="button" onclick="playSegment('${source.video_id || source.job_id}', ${start}, ${pageArg})"
+                            class="text-primary font-bold hover:underline flex items-center gap-xs text-body-sm">
+                        <span class="material-symbols-outlined text-[18px]">${isDoc ? 'menu_book' : 'play_arrow'}</span>
+                        ${source.video_name || source.title} — ${locatorLabel(source)}
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        answerText.textContent = error.message;
     } finally {
         searchButton.disabled = false;
         searchButton.textContent = 'Search';

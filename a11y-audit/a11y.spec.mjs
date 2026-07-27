@@ -5,7 +5,7 @@ const BASE = process.env.A11Y_BASE_URL || 'http://127.0.0.1:8000';
 
 const PAGES = [
   { name: 'home', url: `${BASE}/` },
-  { name: 'public_enhanced', url: `${BASE}/public/enhanced/` },
+  { name: 'library_redirect', url: `${BASE}/library/` },
   { name: 'login', url: `${BASE}/accounts/login/` },
   { name: 'register', url: `${BASE}/accounts/register/` },
 ];

@@ -2,14 +2,12 @@
 Django==4.2.30
 Pillow==12.2.0
 django-cors-headers==4.6.0
-djangorestframework==3.16.0
-drf-spectacular==0.28.0
 dj-database-url==2.1.0
 psycopg2-binary==2.9.10
 python-dotenv==1.2.2
 whitenoise[brotli]==6.7.0
 yt-dlp>=2026.6.9
-opencv-python-headless>=4.10.0
+pypdf>=5.0.0
 numpy>=1.26.0,<3.0
 urllib3>=2.6.3
 requests>=2.33.0

@@ -1,0 +1,26 @@
+{
+  "name": "Recall AI",
+  "short_name": "Recall",
+  "description": "Your content vault — ask questions across PDFs, audio, and video.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf9f8",
+  "theme_color": "#002753",
+  "lang": "en",
+  "scope": "/",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/video_processor/pwa/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/video_processor/pwa/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

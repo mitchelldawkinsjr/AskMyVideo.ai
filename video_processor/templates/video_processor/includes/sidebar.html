@@ -4,7 +4,7 @@
             <span class="material-symbols-outlined text-primary-fixed-dim text-[32px]">memory</span>
             <div class="flex flex-col">
                 <span class="text-headline-md font-bold text-on-primary">Recall AI</span>
-                <span class="text-label-md text-primary-fixed-dim/80">Intelligent Video Recall</span>
+                <span class="text-label-md text-primary-fixed-dim/80">Your Content Vault</span>
             </div>
         </div>
     </div>
@@ -12,31 +12,13 @@
         <a href="{% url 'home' %}"
            class="flex items-center gap-md px-md py-sm rounded-lg transition-colors {% if request.resolver_match.url_name == 'home' %}bg-primary-fixed-dim/10 text-on-primary{% else %}text-primary-fixed-dim/70 hover:text-on-primary hover:bg-primary-fixed-dim/20{% endif %}">
             <span class="material-symbols-outlined">home</span>
-            <span class="text-label-lg">Home</span>
+            <span class="text-label-lg">Ask Vault</span>
         </a>
         {% if user.is_authenticated %}
-        <a href="{% url 'enhanced_search' %}"
-           class="flex items-center gap-md px-md py-sm rounded-lg transition-colors {% if request.resolver_match.url_name == 'enhanced_search' %}bg-primary-fixed-dim/10 text-on-primary{% else %}text-primary-fixed-dim/70 hover:text-on-primary hover:bg-primary-fixed-dim/20{% endif %}">
-            <span class="material-symbols-outlined">search</span>
-            <span class="text-label-lg">Search</span>
-        </a>
         <a href="{% url 'video_library' %}"
            class="flex items-center gap-md px-md py-sm rounded-lg transition-colors {% if request.resolver_match.url_name == 'video_library' %}bg-primary-fixed-dim/10 text-on-primary{% else %}text-primary-fixed-dim/70 hover:text-on-primary hover:bg-primary-fixed-dim/20{% endif %}">
-            <span class="material-symbols-outlined">folder</span>
-            <span class="text-label-lg">My Library</span>
-        </a>
-        {% else %}
-        <a href="{% url 'public_enhanced_search' %}"
-           class="flex items-center gap-md px-md py-sm rounded-lg transition-colors {% if request.resolver_match.url_name == 'public_enhanced_search' or request.resolver_match.url_name == 'public_user_search' or request.resolver_match.url_name == 'public_user_enhanced_search' %}bg-primary-fixed-dim/10 text-on-primary{% else %}text-primary-fixed-dim/70 hover:text-on-primary hover:bg-primary-fixed-dim/20{% endif %}">
-            <span class="material-symbols-outlined">search</span>
-            <span class="text-label-lg">Search</span>
-        </a>
-        {% endif %}
-        {% if user.is_authenticated %}
-        <a href="{% url 'enhanced_search' %}"
-           class="flex items-center gap-md px-md py-sm rounded-lg transition-colors text-primary-fixed-dim/70 hover:text-on-primary hover:bg-primary-fixed-dim/20">
-            <span class="material-symbols-outlined">history</span>
-            <span class="text-label-lg">Recent Recalls</span>
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span class="text-label-lg">Vault</span>
         </a>
         {% endif %}
     </nav>
@@ -45,7 +27,7 @@
         <a href="{% url 'upload_video' %}"
            class="w-full bg-primary-fixed-dim text-primary py-sm rounded-lg font-bold flex items-center justify-center gap-xs hover:bg-white transition-all active:scale-95 {% if request.resolver_match.url_name == 'upload_video' %}ring-2 ring-on-primary/40{% endif %}">
             <span class="material-symbols-outlined">upload</span>
-            Upload Video
+            Upload Content
         </a>
         <div class="flex items-center gap-md px-md py-sm text-primary-fixed-dim/70">
             <span class="material-symbols-outlined">person</span>

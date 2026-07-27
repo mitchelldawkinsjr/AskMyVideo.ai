@@ -16,6 +16,11 @@ performSearch = async function() {
     const query = document.getElementById('searchQuery').value.trim();
     if (!query) return;
 
+    if (currentMode === 'ask') {
+        return performAsk(query);
+    }
+    document.getElementById('answerSection').classList.add('hidden');
+
     const searchButton = document.getElementById('searchButton');
     const resultsSection = document.getElementById('resultsSection');
     const resultsGrid = document.getElementById('resultsGrid');
@@ -44,11 +49,13 @@ performSearch = async function() {
             resultsGrid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center"><h3 class="text-headline-md text-primary mb-sm">No results found</h3><p class="text-on-surface-variant">Try different keywords or switch search modes.</p></div>';
         } else {
             resultsGrid.innerHTML = data.results.map(result => {
-                const score = result.relevance_score ? Math.round(result.relevance_score * 100) : null;
+                const score = formatMatchPercent(result);
+                const isDoc = result.content_kind === 'document';
+                const pageArg = result.page != null ? result.page : 'null';
                 return `
                 <div class="luminous-card rounded-xl overflow-hidden flex flex-col md:flex-row group hover:border-primary/20 transition-all p-md gap-md">
                     <div class="md:w-48 h-32 bg-surface-container rounded-lg flex items-center justify-center shrink-0 relative">
-                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">play_circle</span>
+                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">${isDoc ? 'description' : 'play_circle'}</span>
                         ${score ? `<span class="absolute top-2 right-2 px-2 py-0.5 bg-primary text-on-primary text-label-md font-bold rounded">${score}% MATCH</span>` : ''}
                     </div>
                     <div class="flex-1 flex flex-col justify-between">
@@ -57,10 +64,10 @@ performSearch = async function() {
                             <p class="text-on-surface-variant text-body-sm line-clamp-2 italic border-l-2 border-outline-variant/30 pl-sm">${result.text}</p>
                         </div>
                         <div class="flex items-center justify-between mt-sm">
-                            <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time})"
+                            <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time || 0}, ${pageArg})"
                                     class="text-primary font-bold hover:underline flex items-center gap-xs">
-                                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                ${formatTime(result.start_time)}
+                                <span class="material-symbols-outlined text-[18px]">${isDoc ? 'menu_book' : 'play_arrow'}</span>
+                                ${typeof locatorLabel === 'function' ? locatorLabel(result) : formatTime(result.start_time)}
                             </button>
                         </div>
                     </div>

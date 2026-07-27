@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 from urllib.parse import urlparse
@@ -9,6 +10,31 @@ from urllib.parse import urlparse
 import yt_dlp
 
 logger = logging.getLogger(__name__)
+
+# Matches the video ID in watch/short/embed URLs.
+_YOUTUBE_URL_ID_RE = re.compile(
+    r"(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/|youtube\.com/embed/|youtube\.com/shorts/)"
+    r"([a-zA-Z0-9_-]{11})"
+)
+# Downloads are saved as "<id>_<title>.<ext>" (see download_youtube_video outtmpl).
+_FILENAME_ID_RE = re.compile(r"^([a-zA-Z0-9_-]{11})_")
+
+
+def extract_youtube_id(url: str | None) -> str | None:
+    """Extract the 11-character video ID from a YouTube URL."""
+    if not url:
+        return None
+    match = _YOUTUBE_URL_ID_RE.search(url)
+    return match.group(1) if match else None
+
+
+def extract_youtube_id_from_filename(filename: str | None) -> str | None:
+    """Extract the video ID from a yt-dlp download filename (``<id>_<title>``)."""
+    if not filename:
+        return None
+    match = _FILENAME_ID_RE.match(Path(filename).name)
+    return match.group(1) if match else None
+
 
 MAX_PLAYLIST_VIDEOS = 10
 MAX_CONCURRENT_JOBS = 2

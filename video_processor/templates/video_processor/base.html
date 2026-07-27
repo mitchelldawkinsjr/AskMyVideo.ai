@@ -2,8 +2,9 @@
 <html class="light" lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Recall AI{% endblock %}</title>
+    {% include "video_processor/includes/pwa_head.html" %}
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -15,13 +16,11 @@
     {% block body %}
     {% include "video_processor/includes/sidebar.html" %}
     <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-primary border-t border-primary-fixed-dim/20 flex justify-around py-sm px-sm">
-        <a href="{% url 'home' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">home</span>Home</a>
+        <a href="{% url 'home' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">home</span>Ask</a>
         {% if user.is_authenticated %}
-        <a href="{% url 'enhanced_search' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">search</span>Search</a>
-        <a href="{% url 'video_library' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">folder</span>Library</a>
+        <a href="{% url 'video_library' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">inventory_2</span>Vault</a>
         <a href="{% url 'upload_video' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">upload</span>Upload</a>
         {% else %}
-        <a href="{% url 'public_enhanced_search' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">search</span>Search</a>
         <a href="{% url 'login' %}" class="flex flex-col items-center text-primary-fixed-dim hover:text-on-primary text-label-md transition-colors"><span class="material-symbols-outlined">login</span>Sign In</a>
         {% endif %}
     </nav>

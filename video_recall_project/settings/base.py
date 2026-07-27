@@ -16,8 +16,6 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     "corsheaders",
-    "rest_framework",
-    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
@@ -84,43 +82,20 @@ USE_TZ = True
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-}
+# Public demo: the landing page "Try it now" search runs against this
+# account's videos. Leave unset to hide the demo section.
+DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "")
 
-# drf-spectacular settings
-SPECTACULAR_SETTINGS = {
-    "TITLE": "AskMyVideo API",
-    "DESCRIPTION": "Intelligent Video Search & Recall System API Documentation",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "COMPONENT_SPLIT_REQUEST": True,
-    "SCHEMA_PATH_PREFIX": "/api/",
-    "TAGS": [
-        {"name": "Search", "description": "Video search endpoints"},
-        {"name": "Videos", "description": "Video management endpoints"},
-        {"name": "Admin", "description": "Administrative endpoints"},
-        {"name": "Health", "description": "Health check endpoints"},
-    ],
-}
+# Ask (RAG question answering) — requires OPENAI_API_KEY; OPENAI_MODEL
+# defaults to gpt-4o-mini (both read from the environment in api.py).
 
 # Login/Logout redirects
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
 # File upload settings
-DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB
 
 # Security Settings - Defaults (can be overridden in environment-specific settings)
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-production")

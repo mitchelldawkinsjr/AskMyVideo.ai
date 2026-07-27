@@ -119,8 +119,7 @@ class AudioUploadViewTests(TestCase):
         )
         self.client.login(username="upload-user", password="testpass123")
 
-    @patch("video_processor.views.start_video_job_thread")
-    def test_upload_accepts_mp3_file(self, mock_start_thread):
+    def test_upload_accepts_mp3_file(self):
         upload = SimpleUploadedFile(
             "podcast.mp3", b"fake mp3 bytes", content_type="audio/mpeg"
         )
@@ -132,7 +131,7 @@ class AudioUploadViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         job = VideoJob.objects.get(user=self.user, video_name="podcast.mp3")
         self.assertEqual(job.status, JobStatus.PENDING)
-        mock_start_thread.assert_called_once_with(job.job_id)
+        self.assertEqual(job.content_kind, "audio")
 
     def test_upload_rejects_unsupported_extension(self):
         upload = SimpleUploadedFile(

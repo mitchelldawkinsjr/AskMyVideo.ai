@@ -1,0 +1,12 @@
+{% load static %}
+<meta name="theme-color" content="#002753">
+<meta name="description" content="Recall AI — your content vault. Ask questions across PDFs, audio, and video with AI-powered search.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Recall AI">
+<link rel="manifest" href="{% url 'pwa_manifest' %}">
+<link rel="icon" href="{% static 'video_processor/pwa/icons/favicon.ico' %}" sizes="any">
+<link rel="icon" href="{% static 'video_processor/pwa/icons/favicon-32x32.png' %}" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="{% static 'video_processor/pwa/icons/apple-touch-icon.png' %}">
+<script defer src="{% static 'video_processor/pwa/registerSW.js' %}"></script>

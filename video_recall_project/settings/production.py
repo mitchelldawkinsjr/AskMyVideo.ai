@@ -221,8 +221,8 @@ if os.environ.get("USE_JSON_LOGGING", "False").lower() == "true":
         pass  # JSON logging not available, use default
 
 # Performance
-DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 100  # 100MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 100  # 100MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB
 
 # Email (for notifications)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

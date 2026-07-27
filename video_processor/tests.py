@@ -117,10 +117,16 @@ class AskMyVideoPhase1Tests(TestCase):
         self.assertEqual(data["status"], "healthy")
         self.assertIn("timestamp", data)
 
-    @patch("video_processor.views.search_engine")
+    @patch("video_processor.api.search_engine")
     def test_health_check_with_search_engine(self, mock_search_engine):
         """Test API health check includes search engine status."""
-        mock_search_engine.is_available = True
+        mock_search_engine.get_stats.return_value = {
+            "is_available": True,
+            "is_initialized": True,
+            "model_name": "test-model",
+            "total_segments": 0,
+            "index_size": 0,
+        }
 
         response = self.client.get("/api/health/")
         self.assertEqual(response.status_code, 200)
@@ -192,16 +198,50 @@ class HomeViewTests(TestCase):
     def test_anonymous_home_shows_marketing_landing(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Find any moment in your videos")
+        self.assertContains(response, "Ask your PDFs, audio, and videos")
         self.assertContains(response, "Get started free")
-        self.assertNotContains(response, "Search Hub")
+        self.assertNotContains(response, "Ask Your Vault")
 
     def test_authenticated_home_shows_search_hub(self):
         self.client.login(username="landinguser", password="testpass123")
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Search Hub")
+        self.assertContains(response, "Ask Your Vault")
         self.assertNotContains(response, "Built for real-world applications")
+
+
+class TranscriptWindowingTests(TestCase):
+    """Segment merging for the semantic index."""
+
+    def test_build_windows_merges_segments_with_real_timestamps(self):
+        from semantic_search import build_windows
+
+        segments = [
+            {"start": float(i * 2), "end": float(i * 2 + 2), "text": "word " * 10}
+            for i in range(12)
+        ]
+        windows = build_windows(segments)
+
+        self.assertGreater(len(windows), 1)
+        # First window covers the first six 10-word segments (60-word target).
+        self.assertEqual(windows[0]["start"], 0.0)
+        self.assertEqual(windows[0]["end"], 12.0)
+        self.assertEqual(len(windows[0]["text"].split()), 60)
+        # Second window starts where the first ended.
+        self.assertEqual(windows[1]["start"], 12.0)
+
+    def test_build_windows_skips_empty_segments(self):
+        from semantic_search import build_windows
+
+        windows = build_windows(
+            [
+                {"start": 0.0, "end": 1.0, "text": "  "},
+                {"start": 1.0, "end": 2.0, "text": "hello world"},
+            ]
+        )
+        self.assertEqual(len(windows), 1)
+        self.assertEqual(windows[0]["text"], "hello world")
+        self.assertEqual(windows[0]["start"], 1.0)
 
 
 class SearchFunctionalityTests(TestCase):
@@ -230,15 +270,59 @@ class SearchFunctionalityTests(TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(len(results[0]["segments"]), 2)
 
-    def test_legacy_semantic_mode_reports_keyword_fallback(self):
-        from unittest.mock import MagicMock, patch
+    def test_semantic_mode_reports_keyword_fallback_when_engine_unavailable(self):
+        from unittest.mock import MagicMock
 
-        from .search_helpers import run_legacy_api_search
+        from .search_helpers import run_search
 
         mock_engine = MagicMock()
-        with patch(
-            "video_processor.search_helpers.ensure_search_engine_initialized",
-            return_value=False,
-        ):
-            _, mode = run_legacy_api_search("budget", "semantic", mock_engine)
+        mock_engine.ensure_ready.return_value = False
+
+        results, mode = run_search("budget", "semantic", mock_engine, user=self.user)
         self.assertEqual(mode, "keyword_fallback")
+        self.assertEqual(len(results), 1)
+
+    def test_search_is_scoped_to_user(self):
+        from unittest.mock import MagicMock
+
+        from django.contrib.auth.models import User
+
+        from .search_helpers import run_search
+
+        other_user = User.objects.create_user(
+            username="otheruser", password="testpass123"
+        )
+        mock_engine = MagicMock()
+        mock_engine.ensure_ready.return_value = False
+
+        results, _ = run_search("budget", "keyword", mock_engine, user=other_user)
+        self.assertEqual(results, [])
+
+    def test_api_search_requires_auth_without_username(self):
+        import json
+
+        response = self.client.post(
+            "/api/search/",
+            data=json.dumps({"query": "budget", "search_mode": "keyword"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_api_search_public_username_scope(self):
+        import json
+
+        response = self.client.post(
+            "/api/search/",
+            data=json.dumps(
+                {
+                    "query": "budget",
+                    "search_mode": "keyword",
+                    "username": "searchuser",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["count"], 1)

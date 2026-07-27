@@ -1,6 +1,6 @@
 {% extends "video_processor/landing_base.html" %}
 
-{% block title %}Recall AI | Find Any Moment in Your Videos{% endblock %}
+{% block title %}Recall AI | Ask Your Content Vault{% endblock %}
 
 {% block content %}
 <section class="hero-glow relative overflow-hidden">
@@ -9,13 +9,13 @@
             <div class="max-w-xl">
                 <p class="inline-flex items-center gap-xs px-md py-xs rounded-full bg-primary/8 text-primary text-label-lg font-semibold mb-md border border-primary/10">
                     <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-                    AI-powered video memory
+                    AI-powered content vault
                 </p>
                 <h1 class="text-headline-xl md:text-[56px] md:leading-[64px] text-primary tracking-tight mb-md">
-                    Find any moment in your videos — by meaning, not just keywords.
+                    Ask your PDFs, audio, and videos — get answers with sources.
                 </h1>
                 <p class="text-body-lg text-on-surface-variant mb-lg max-w-lg">
-                    Upload or link your videos, let AI transcribe and index every word, then search in plain English and jump straight to the exact second.
+                    Upload content to your vault, then ask in plain English. Jump to the exact page or timestamp that answers your question.
                 </p>
                 <div class="flex flex-wrap gap-sm mb-md">
                     <a href="{% url 'register' %}"
@@ -87,7 +87,7 @@
     <div class="max-w-6xl mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="text-center max-w-2xl mx-auto mb-xl">
             <h2 class="text-headline-lg text-primary mb-sm">How it works</h2>
-            <p class="text-body-lg text-on-surface-variant">From raw footage to searchable intelligence in three steps.</p>
+            <p class="text-body-lg text-on-surface-variant">From upload to answers with source links in three steps.</p>
         </div>
         <div class="grid md:grid-cols-3 gap-gutter relative">
             <div class="hidden md:block absolute top-12 left-[20%] right-[20%] h-0.5 step-connector -z-10"></div>
@@ -95,19 +95,19 @@
                 <div class="w-14 h-14 mx-auto mb-md rounded-full bg-primary text-on-primary flex items-center justify-center text-headline-md font-bold">1</div>
                 <span class="material-symbols-outlined text-primary text-[36px] mb-sm">cloud_upload</span>
                 <h3 class="text-headline-md text-primary mb-xs">Upload</h3>
-                <p class="text-body-sm text-on-surface-variant">Drop MP4, MOV, or paste a YouTube URL or playlist. Your library grows automatically.</p>
+                <p class="text-body-sm text-on-surface-variant">Drop PDF, MP3, MP4, or paste a YouTube URL. Your vault grows automatically.</p>
             </div>
             <div class="luminous-card rounded-xl p-lg text-center">
                 <div class="w-14 h-14 mx-auto mb-md rounded-full bg-primary text-on-primary flex items-center justify-center text-headline-md font-bold">2</div>
                 <span class="material-symbols-outlined text-primary text-[36px] mb-sm">transcribe</span>
-                <h3 class="text-headline-md text-primary mb-xs">AI transcribes</h3>
-                <p class="text-body-sm text-on-surface-variant">Whisper-powered speech-to-text breaks every video into searchable segments with timestamps.</p>
+                <h3 class="text-headline-md text-primary mb-xs">AI indexes</h3>
+                <p class="text-body-sm text-on-surface-variant">Speech becomes transcripts; PDFs become page-aware text — all searchable by meaning.</p>
             </div>
             <div class="luminous-card rounded-xl p-lg text-center">
                 <div class="w-14 h-14 mx-auto mb-md rounded-full bg-primary text-on-primary flex items-center justify-center text-headline-md font-bold">3</div>
                 <span class="material-symbols-outlined text-primary text-[36px] mb-sm">manage_search</span>
-                <h3 class="text-headline-md text-primary mb-xs">Search &amp; jump</h3>
-                <p class="text-body-sm text-on-surface-variant">Ask in natural language, pick Smart, AI, or Keyword mode, and play from the exact moment.</p>
+                <h3 class="text-headline-md text-primary mb-xs">Ask &amp; open</h3>
+                <p class="text-body-sm text-on-surface-variant">Ask in natural language and open the exact page or timestamp that backs the answer.</p>
             </div>
         </div>
     </div>
@@ -207,6 +207,7 @@
     </div>
 </section>
 
+{% if demo_username %}
 <section id="demo" class="py-xl">
     <div class="max-w-4xl mx-auto px-margin-mobile md:px-margin-desktop">
         <div class="text-center mb-lg">
@@ -250,12 +251,11 @@
 
         <p class="text-center text-body-sm text-on-surface-variant mt-lg">
             Want your own library?
-            <a href="{% url 'register' %}" class="text-primary font-bold hover:underline">Create a free account</a>
-            or try
-            <a href="{% url 'public_enhanced_search' %}" class="text-primary font-bold hover:underline">Enhanced Search</a>.
+            <a href="{% url 'register' %}" class="text-primary font-bold hover:underline">Create a free account</a>.
         </p>
     </div>
 </section>
+{% endif %}
 
 <section class="py-xl bg-surface/40 border-t border-outline-variant/10">
     <div class="max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop text-center">
@@ -317,13 +317,13 @@ async function performDemoSearch() {
     btn.disabled = true;
     btn.textContent = 'Searching...';
     section.classList.remove('hidden');
-    grid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center text-on-surface-variant">Searching through indexed videos...</div>';
+    grid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center text-on-surface-variant">Searching the vault...</div>';
 
     try {
         const response = await fetch('/api/search/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ query, search_mode: demoMode })
+            body: JSON.stringify({ query, search_mode: demoMode, username: '{{ demo_username }}' })
         });
         const data = await response.json();
         if (!data.success) throw new Error(data.error || 'Search failed');
@@ -336,11 +336,13 @@ async function performDemoSearch() {
             grid.innerHTML = '<div class="luminous-card rounded-xl p-xl text-center"><h3 class="text-headline-md text-primary mb-sm">No results found</h3><p class="text-on-surface-variant">Try different keywords or switch search modes.</p></div>';
         } else {
             grid.innerHTML = data.results.map(result => {
-                const score = result.relevance_score ? Math.round(result.relevance_score * 100) : null;
+                const score = formatMatchPercent(result);
+                const isDoc = result.content_kind === 'document';
+                const pageArg = result.page != null ? result.page : 'null';
                 return `
                 <div class="luminous-card rounded-xl overflow-hidden flex flex-col md:flex-row p-md gap-md hover:border-primary/20 transition-all">
                     <div class="md:w-48 h-32 bg-surface-container rounded-lg flex items-center justify-center shrink-0 relative">
-                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">play_circle</span>
+                        <span class="material-symbols-outlined text-primary text-[48px] opacity-40">${isDoc ? 'description' : 'play_circle'}</span>
                         ${score ? `<span class="absolute top-2 right-2 px-2 py-0.5 bg-primary text-on-primary text-label-md font-bold rounded">${score}% MATCH</span>` : ''}
                     </div>
                     <div class="flex-1 flex flex-col justify-between">
@@ -348,10 +350,10 @@ async function performDemoSearch() {
                             <h4 class="text-body-lg font-bold text-primary mb-xs">${result.video_name}</h4>
                             <p class="text-on-surface-variant text-body-sm line-clamp-2 italic border-l-2 border-outline-variant/30 pl-sm">${result.text}</p>
                         </div>
-                        <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time})"
+                        <button type="button" onclick="playSegment('${result.video_id}', ${result.start_time || 0}, ${pageArg})"
                                 class="mt-sm text-primary font-bold hover:underline flex items-center gap-xs self-start">
-                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                            ${formatTime(result.start_time)}
+                            <span class="material-symbols-outlined text-[18px]">${isDoc ? 'menu_book' : 'play_arrow'}</span>
+                            ${typeof locatorLabel === 'function' ? locatorLabel(result) : formatTime(result.start_time)}
                         </button>
                     </div>
                 </div>`;

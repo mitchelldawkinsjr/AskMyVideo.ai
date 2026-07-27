@@ -1,13 +1,13 @@
 {% extends "video_processor/base.html" %}
 
-{% block title %}Recall AI | Upload Media{% endblock %}
+{% block title %}Recall AI | Upload Content{% endblock %}
 
 {% block body_theme %}theme-surface bg-background{% endblock %}
 
 {% block content %}
 <div class="mb-lg">
-    <h2 class="text-headline-lg text-primary mb-xs">Upload Experience</h2>
-    <p class="text-on-surface-variant text-body-md">Ingest your video and audio content for intelligent indexing and semantic search.</p>
+    <h2 class="text-headline-lg text-primary mb-xs">Upload to Your Vault</h2>
+    <p class="text-on-surface-variant text-body-md">Add PDFs, audio, or video — then ask questions and jump to the source.</p>
 </div>
 
 <section class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-sm overflow-hidden mb-xl">
@@ -30,9 +30,9 @@
                 <div class="w-16 h-16 bg-primary-container/10 rounded-full flex items-center justify-center mb-md">
                     <span class="material-symbols-outlined text-primary text-[32px]">cloud_upload</span>
                 </div>
-                <p class="text-headline-md text-primary mb-xs">Drag & drop video or audio files</p>
-                <p class="text-on-surface-variant text-body-md mb-lg">MP4, MOV, MP3, WAV, and more</p>
-                <input type="file" name="video" accept="video/*,audio/*,.mp3,.wav,.m4a,.aac" required
+                <p class="text-headline-md text-primary mb-xs">Drag & drop content files</p>
+                <p class="text-on-surface-variant text-body-md mb-lg">PDF, MP4, MOV, MP3, WAV, and more</p>
+                <input type="file" name="video" accept="video/*,audio/*,.pdf,.mp3,.wav,.m4a,.aac" required
                        class="mb-md text-body-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-on-primary file:font-bold">
                 <button type="submit" class="bg-primary text-on-primary px-xl py-sm rounded-lg font-label-lg hover:opacity-90 transition-opacity shadow-md">
                     Upload & Process
@@ -77,7 +77,7 @@
         <table class="w-full text-left">
             <thead>
                 <tr class="bg-surface-container-low border-b border-outline-variant/20">
-                    <th class="px-md py-sm text-label-lg text-on-surface-variant">Video</th>
+                    <th class="px-md py-sm text-label-lg text-on-surface-variant">Content</th>
                     <th class="px-md py-sm text-label-lg text-on-surface-variant">Status</th>
                     <th class="px-md py-sm text-label-lg text-on-surface-variant">Date</th>
                 </tr>

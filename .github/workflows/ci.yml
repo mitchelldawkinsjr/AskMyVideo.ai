@@ -78,14 +78,12 @@ jobs:
       - name: black check
         run: |
           black --check video_processor/ video_recall_project/ \
-            core_video_processor.py whisper_compat.py \
-            semantic_search.py enhanced_semantic_search.py
+            core_video_processor.py whisper_compat.py semantic_search.py
 
       - name: isort check
         run: |
           isort --check-only video_processor/ video_recall_project/ \
-            core_video_processor.py whisper_compat.py \
-            semantic_search.py enhanced_semantic_search.py
+            core_video_processor.py whisper_compat.py semantic_search.py
 
   docker-build:
     name: Docker Build Verify

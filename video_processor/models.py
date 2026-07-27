@@ -1,9 +1,10 @@
-import re
 import uuid
 from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.db import models
+
+from .youtube_utils import extract_youtube_id, extract_youtube_id_from_filename
 
 
 class JobStatus(models.TextChoices):
@@ -15,23 +16,23 @@ class JobStatus(models.TextChoices):
     FAILED = "failed", "Failed"
 
 
-class VideoJob(models.Model):
-    """
-    Model for video processing jobs.
+class ContentKind(models.TextChoices):
+    """Kind of vault content stored on a VideoJob row."""
 
-    Replaces the JSON-based job management with proper Django ORM.
-    """
+    VIDEO = "video", "Video"
+    AUDIO = "audio", "Audio"
+    DOCUMENT = "document", "Document"
+
+
+class VideoJob(models.Model):
+    """A content vault item: video, audio, or document with searchable text."""
 
     AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac"}
+    DOCUMENT_EXTENSIONS = {".pdf"}
 
-    # Use UUID as primary key to match existing system
     job_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    # Multi-tenancy: Add user ownership
-    # Note: User must be explicitly provided when creating VideoJob instances
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    # Video information (removed playlist field completely)
     video_path = models.CharField(max_length=500, help_text="Path to the video file")
     video_name = models.CharField(max_length=500, help_text="Original video filename")
     youtube_url = models.URLField(
@@ -40,8 +41,18 @@ class VideoJob(models.Model):
         help_text="Original YouTube URL if this was a YouTube video",
     )
     file_size_bytes = models.BigIntegerField(null=True, blank=True)
+    file_removed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the media file was deleted to reclaim storage",
+    )
+    content_kind = models.CharField(
+        max_length=20,
+        choices=ContentKind.choices,
+        default=ContentKind.VIDEO,
+        help_text="video, audio, or document",
+    )
 
-    # Job status and timing
     status = models.CharField(
         max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING
     )
@@ -53,48 +64,75 @@ class VideoJob(models.Model):
         null=True, blank=True, help_text="Processing time in seconds"
     )
 
-    # Error handling
     error_message = models.TextField(null=True, blank=True)
 
-    # Processing results - using JSONField for flexibility
     metadata = models.JSONField(null=True, blank=True, help_text="Video metadata")
     transcription = models.JSONField(
         null=True, blank=True, help_text="Transcription results"
     )
     processing_errors = models.JSONField(default=list, blank=True)
 
-    # New fields
     title = models.CharField(max_length=200, blank=True)
     transcript = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-created_at"]
-        # Remove indexes to avoid circular dependency in migrations
-        # indexes = [
-        #     models.Index(fields=["user", "status"]),
-        #     models.Index(fields=["user", "created_at"]),
-        # ]
+        indexes = [
+            models.Index(fields=["user", "status"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.title or self.video_path}"
 
+    @classmethod
+    def infer_content_kind(cls, file_path: str = "", youtube_url: str = None) -> str:
+        """Infer content_kind from a path extension or YouTube URL."""
+        if youtube_url:
+            return ContentKind.VIDEO
+        extension = Path(file_path or "").suffix.lower()
+        if extension in cls.DOCUMENT_EXTENSIONS:
+            return ContentKind.DOCUMENT
+        if extension in cls.AUDIO_EXTENSIONS:
+            return ContentKind.AUDIO
+        return ContentKind.VIDEO
+
     @property
     def is_audio_file(self):
         """Return True if this job references an audio file."""
+        if self.content_kind == ContentKind.AUDIO:
+            return True
         if not self.video_path:
             return False
         return Path(self.video_path).suffix.lower() in self.AUDIO_EXTENSIONS
 
     @property
+    def is_document(self):
+        """Return True if this job is a document (e.g. PDF)."""
+        if self.content_kind == ContentKind.DOCUMENT:
+            return True
+        if not self.video_path:
+            return False
+        return Path(self.video_path).suffix.lower() in self.DOCUMENT_EXTENSIONS
+
+    @property
+    def locator_type(self):
+        """How citations locate a passage: 'page' for documents, else 'time'."""
+        return "page" if self.is_document else "time"
+
+    @property
+    def file_available(self):
+        """Return True when the media file is still expected to be on disk."""
+        return bool(self.video_path) and self.file_removed_at is None
+
+    @property
     def duration_seconds(self):
-        """Get video duration from metadata."""
         if self.metadata and "duration_seconds" in self.metadata:
             return self.metadata["duration_seconds"]
         return 0
 
     @property
     def resolution(self):
-        """Get video resolution from metadata."""
         if self.metadata:
             width = self.metadata.get("width_pixels", 0)
             height = self.metadata.get("height_pixels", 0)
@@ -103,124 +141,44 @@ class VideoJob(models.Model):
 
     @property
     def transcription_text(self):
-        """Get transcription text."""
         if self.transcription and "text" in self.transcription:
             return self.transcription["text"]
         return ""
 
     @property
     def text_segments(self):
-        """Get text segments with timestamps."""
         if self.transcription and "text_segments" in self.transcription:
             return self.transcription["text_segments"]
         return []
 
     @property
     def word_count(self):
-        """Get word count from transcription."""
         if self.transcription and "word_count" in self.transcription:
             return self.transcription["word_count"]
         return 0
 
     @property
     def language(self):
-        """Get detected language."""
         if self.transcription and "language" in self.transcription:
             return self.transcription["language"]
         return "unknown"
 
-    def is_youtube_video(self):
-        """Check if this video was downloaded from YouTube."""
-        # First check if we have a stored YouTube URL
-        if self.youtube_url:
-            return True
-
-        # Check if the video path contains typical YouTube patterns
-        video_path = str(self.video_path).lower()
-
-        # Common patterns that indicate YouTube videos
-        youtube_patterns = [
-            "youtube",
-            "youtu.be",
-            "yt_dlp",
-            # YouTube video IDs are 11 characters
-            # Common pattern: title [ID].ext
-        ]
-
-        # Check for YouTube patterns in path
-        for pattern in youtube_patterns:
-            if pattern in video_path:
-                return True
-
-        # Check for YouTube video ID pattern in filename
-        # YouTube video IDs are 11 characters of letters, numbers, hyphens, underscores
-        filename = Path(self.video_path).name
-        youtube_id_pattern = r"[a-zA-Z0-9_-]{11}"
-        if re.search(youtube_id_pattern, filename):
-            # Additional check: if filename has typical YouTube download pattern
-            if any(
-                pattern in filename.lower() for pattern in ["[", "]", "_", "youtube"]
-            ):
-                return True
-
-        return False
-
     def get_youtube_video_id(self):
-        """Extract YouTube video ID from the stored URL or filename."""
-        # First try to extract from stored YouTube URL
-        if self.youtube_url:
-            patterns = [
-                r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})",
-                r"youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})",
-            ]
+        """The YouTube video ID, from the stored URL or the download filename."""
+        return extract_youtube_id(self.youtube_url) or extract_youtube_id_from_filename(
+            self.video_path
+        )
 
-            for pattern in patterns:
-                match = re.search(pattern, self.youtube_url)
-                if match:
-                    return match.group(1)
-
-        # If no URL or no match, try to extract from filename/path
-        if self.is_youtube_video() and self.video_path:
-            filename = Path(self.video_path).name
-
-            # Common patterns for YouTube downloaded files:
-            # 1. [TITLE] [VIDEO_ID].ext
-            # 2. TITLE [VIDEO_ID].ext
-            # 3. VIDEO_ID.ext
-            # 4. Any 11-character alphanumeric string with hyphens/underscores
-
-            patterns = [
-                # Pattern for files like "[Title] [VIDEO_ID].mp4" or "Title [VIDEO_ID].mp4"
-                r"\[([a-zA-Z0-9_-]{11})\]",
-                # Pattern for files ending with " VIDEO_ID.ext"
-                r"\s([a-zA-Z0-9_-]{11})\.",
-                # Pattern for files starting with "VIDEO_ID "
-                r"^([a-zA-Z0-9_-]{11})\s",
-                # Pattern for standalone video ID as filename
-                r"^([a-zA-Z0-9_-]{11})\.",
-                # General pattern - any 11-character YouTube ID in the filename
-                r"([a-zA-Z0-9_-]{11})",
-            ]
-
-            for pattern in patterns:
-                matches = re.findall(pattern, filename)
-                for match in matches:
-                    # Validate that this looks like a YouTube video ID
-                    # YouTube IDs are 11 characters, mix of letters, numbers, hyphens, underscores
-                    if len(match) == 11 and re.match(r"^[a-zA-Z0-9_-]{11}$", match):
-                        return match
-
-        return None
+    def is_youtube_video(self):
+        return self.get_youtube_video_id() is not None
 
     def search_segments(self, query):
         """
-        Search for text in transcript segments.
+        Score transcript segments against a keyword query.
 
-        Args:
-            query: Search term
-
-        Returns:
-            List of matching segments with timestamps and relevance scores
+        Returns segments sorted by relevance: exact-phrase matches score
+        highest, then segments containing all query tokens, then (only when
+        the full transcript contains all tokens) segments with partial hits.
         """
         if not self.text_segments or not query:
             return []
@@ -244,14 +202,16 @@ class VideoJob(models.Model):
             else:
                 continue
 
-            matching_segments.append(
-                {
-                    "start_time": segment.get("start", 0),
-                    "end_time": segment.get("end", 0),
-                    "text": text,
-                    "relevance_score": score,
-                }
-            )
+            match = {
+                "start_time": segment.get("start", 0),
+                "end_time": segment.get("end", 0),
+                "text": text,
+                "relevance_score": score,
+                "content_kind": self.content_kind,
+            }
+            if "page" in segment:
+                match["page"] = segment["page"]
+            matching_segments.append(match)
 
         if not matching_segments and len(tokens) > 1:
             full_text = self.transcription_text.lower()
@@ -265,23 +225,23 @@ class VideoJob(models.Model):
                     if not hit_tokens:
                         continue
                     score = float(sum(text_lower.count(token) for token in hit_tokens))
-                    matching_segments.append(
-                        {
-                            "start_time": segment.get("start", 0),
-                            "end_time": segment.get("end", 0),
-                            "text": text,
-                            "relevance_score": score,
-                        }
-                    )
+                    match = {
+                        "start_time": segment.get("start", 0),
+                        "end_time": segment.get("end", 0),
+                        "text": text,
+                        "relevance_score": score,
+                        "content_kind": self.content_kind,
+                    }
+                    if "page" in segment:
+                        match["page"] = segment["page"]
+                    matching_segments.append(match)
 
         matching_segments.sort(key=lambda item: item["relevance_score"], reverse=True)
         return matching_segments
 
 
 class VideoSearchQuery(models.Model):
-    """
-    Model to track search queries for analytics.
-    """
+    """Search query log for analytics."""
 
     query = models.CharField(max_length=255)
     results_count = models.IntegerField(default=0)

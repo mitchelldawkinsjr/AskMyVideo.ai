@@ -1,0 +1,18 @@
+{% extends "video_processor/base.html" %}
+
+{% block title %}Recall AI | Offline{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto luminous-card rounded-xl p-xl text-center">
+    <span class="material-symbols-outlined text-[64px] text-primary/30 mb-md">cloud_off</span>
+    <h1 class="text-headline-md text-primary mb-sm">You are offline</h1>
+    <p class="text-body-md text-on-surface-variant mb-lg">
+        Recall AI needs a connection to search your vault and process uploads.
+        Cached pages may still open, but Ask and upload require the network.
+    </p>
+    <button type="button" onclick="window.location.reload()"
+            class="bg-primary text-on-primary px-lg py-sm rounded-lg font-bold hover:opacity-90">
+        Try again
+    </button>
+</div>
+{% endblock %}

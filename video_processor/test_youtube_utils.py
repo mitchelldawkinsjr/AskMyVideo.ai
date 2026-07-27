@@ -166,10 +166,10 @@ class PlaylistHandlerTests(TestCase):
         )
         self.factory = RequestFactory()
 
-    @patch("video_processor.views.start_video_job_thread")
     @patch("video_processor.views.extract_playlist_videos")
-    def test_playlist_handler_respects_video_limit(self, mock_extract, mock_start):
+    def test_playlist_handler_respects_video_limit(self, mock_extract):
         from . import views
+        from .models import VideoJob
 
         urls = [f"https://youtu.be/id{i}" for i in range(15)]
         mock_extract.return_value = (urls, "Test Playlist")
@@ -178,12 +178,14 @@ class PlaylistHandlerTests(TestCase):
         request.user = self.user
 
         with patch("video_processor.views.messages"):
-            response = views.handle_youtube_playlist_simple(
+            response = views.handle_youtube_playlist(
                 request, "https://www.youtube.com/playlist?list=PLtest"
             )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(mock_start.call_count, MAX_PLAYLIST_VIDEOS)
+        self.assertEqual(
+            VideoJob.objects.filter(user=self.user).count(), MAX_PLAYLIST_VIDEOS
+        )
 
 
 class YouTubeUploadValidationTests(TestCase):
@@ -193,9 +195,9 @@ class YouTubeUploadValidationTests(TestCase):
         )
         self.factory = RequestFactory()
 
-    @patch("video_processor.views.start_video_job_thread")
-    def test_rejects_invalid_youtube_url(self, mock_start):
+    def test_rejects_invalid_youtube_url(self):
         from . import views
+        from .models import VideoJob
 
         request = self.factory.post("/upload/")
         request.user = self.user
@@ -206,5 +208,5 @@ class YouTubeUploadValidationTests(TestCase):
             )
 
         self.assertEqual(response.status_code, 302)
-        mock_start.assert_not_called()
+        self.assertFalse(VideoJob.objects.filter(user=self.user).exists())
         mock_messages.error.assert_called_once()

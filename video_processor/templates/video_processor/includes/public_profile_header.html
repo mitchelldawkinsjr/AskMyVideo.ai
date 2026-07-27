@@ -13,9 +13,5 @@
            class="px-md py-sm rounded-lg text-label-lg font-bold {% if request.resolver_match.url_name == 'public_user_search' %}bg-primary text-on-primary{% else %}border border-primary/20 text-primary hover:bg-primary/5{% endif %}">
             Search Hub
         </a>
-        <a href="{% url 'public_user_enhanced_search' username=username %}"
-           class="px-md py-sm rounded-lg text-label-lg font-bold {% if request.resolver_match.url_name == 'public_user_enhanced_search' %}bg-primary text-on-primary{% else %}border border-primary/20 text-primary hover:bg-primary/5{% endif %}">
-            Enhanced Search
-        </a>
     </div>
 </div>

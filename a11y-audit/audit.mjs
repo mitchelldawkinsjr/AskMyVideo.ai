@@ -14,7 +14,7 @@ const OUT_DIR = path.dirname(new URL(import.meta.url).pathname);
 
 const PAGES = [
   { name: 'home', url: `${BASE}/` },
-  { name: 'public_enhanced', url: `${BASE}/public/enhanced/` },
+  { name: 'library_redirect', url: `${BASE}/library/` },
   { name: 'login', url: `${BASE}/accounts/login/` },
   { name: 'register', url: `${BASE}/accounts/register/` },
 ];

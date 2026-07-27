@@ -53,6 +53,38 @@ services:
       retries: 5
       start_period: 120s
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: recall-ai-worker
+    restart: unless-stopped
+    command: ["python", "manage.py", "process_jobs"]
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: video_recall_project.settings.production
+      DATABASE_URL: postgresql://${DB_USERNAME:-recall}:${DB_PASSWORD}@recall-ai-postgres:5432/${DB_DATABASE:-recall_ai}
+      HF_HOME: /app/.cache/huggingface
+      XDG_CACHE_HOME: /app/.cache
+      YOUTUBE_COOKIES_FILE: ${YOUTUBE_COOKIES_FILE:-/app/secrets/youtube_cookies.txt}
+      YTDLP_DENO_PATH: /usr/local/bin/deno
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    volumes:
+      - media:/app/media
+      - search_cache:/app/search_cache
+      - hf_cache:/app/.cache/huggingface
+      - whisper_cache:/app/.cache/whisper
+      - ./secrets:/app/secrets:ro
+    labels:
+      - "com.360ws.app=recall-ai"
+      - "com.360ws.type=docker-app"
+      - "com.360ws.service=worker"
+
   postgres:
     image: postgres:15-alpine
     container_name: recall-ai-postgres

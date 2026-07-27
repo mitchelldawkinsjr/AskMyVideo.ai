@@ -1,18 +1,18 @@
 {% extends "video_processor/base.html" %}
 
-{% block title %}Recall AI | My Library{% endblock %}
+{% block title %}Recall AI | Content Vault{% endblock %}
 
 {% block body_theme %}theme-surface bg-background{% endblock %}
 
 {% block content %}
 <div class="mb-xl flex flex-col md:flex-row md:items-end justify-between gap-lg">
     <div>
-        <h2 class="text-headline-lg text-primary mb-xs">Video Library</h2>
-        <p class="text-body-md text-on-surface-variant">Manage and search through your indexed intelligence.</p>
+        <h2 class="text-headline-lg text-primary mb-xs">Content Vault</h2>
+        <p class="text-body-md text-on-surface-variant">Manage PDFs, audio, and video you can ask about in natural language.</p>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-md">
         <div class="stat-card-gradient p-md rounded-xl border border-outline-variant/10 min-w-[120px]">
-            <p class="text-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Videos</p>
+            <p class="text-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Items</p>
             <p class="text-headline-md text-primary">{{ stats.total_videos }}</p>
         </div>
         <div class="stat-card-gradient p-md rounded-xl border border-outline-variant/10 min-w-[120px]">
@@ -33,11 +33,11 @@
 <div class="flex items-center justify-between mb-lg">
     <a href="{% url 'upload_video' %}"
        class="bg-primary text-on-primary px-lg py-sm rounded-lg font-bold flex items-center gap-xs hover:opacity-90">
-        <span class="material-symbols-outlined">add</span> Upload Video
+        <span class="material-symbols-outlined">add</span> Upload Content
     </a>
-    <a href="{% url 'enhanced_search' %}"
-       class="border-2 border-primary text-primary px-lg py-sm rounded-lg font-bold hover:bg-primary/5 flex items-center gap-xs">
-        <span class="material-symbols-outlined">search</span> Enhanced Search
+    <a href="{% url 'home' %}"
+       class="border-2 border-primary text-primary px-lg py-sm rounded-lg font-bold hover:bg-primary/5 flex items-center justify-center gap-xs">
+        <span class="material-symbols-outlined">search</span> Ask Vault
     </a>
 </div>
 
@@ -50,8 +50,13 @@
             <h4 class="text-body-lg font-bold text-primary mb-sm">{{ result.video.video_name }}</h4>
             {% for segment in result.segments %}
             <div class="border-l-2 border-primary/20 pl-sm mb-sm text-body-sm text-on-surface-variant">
+                {% if segment.page %}
+                <button type="button" onclick="playSegment('{{ result.video.job_id }}', 0, {{ segment.page }})"
+                        class="text-primary font-bold hover:underline mr-sm">page {{ segment.page }}</button>
+                {% else %}
                 <button type="button" onclick="playSegment('{{ result.video.job_id }}', {{ segment.start_time }})"
                         class="text-primary font-bold hover:underline mr-sm">{{ segment.start_time|floatformat:0 }}s</button>
+                {% endif %}
                 {{ segment.text|truncatewords:40 }}
             </div>
             {% endfor %}
@@ -66,11 +71,11 @@
     {% for video in videos %}
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden video-card-hover transition-all duration-300">
         <div class="relative aspect-video bg-surface-container flex items-center justify-center group">
-            <span class="material-symbols-outlined text-primary text-5xl opacity-30">{% if video.is_audio_file %}audiotrack{% else %}videocam{% endif %}</span>
+            <span class="material-symbols-outlined text-primary text-5xl opacity-30">{% if video.is_document %}description{% elif video.is_audio_file %}audiotrack{% else %}videocam{% endif %}</span>
             {% if video.status == 'completed' %}
             <div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <span class="w-12 h-12 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">{% if video.is_document %}menu_book{% else %}play_arrow{% endif %}</span>
                 </span>
             </div>
             {% endif %}
@@ -79,6 +84,7 @@
             <h3 class="text-label-lg text-on-surface line-clamp-2 mb-xs">{{ video.video_name }}</h3>
             <div class="flex items-center gap-sm mb-md flex-wrap">
                 {% include "video_processor/includes/status_badge.html" with status=video.status label=video.get_status_display %}
+                <span class="px-2 py-0.5 bg-primary/10 text-primary rounded text-label-md font-semibold uppercase">{{ video.get_content_kind_display }}</span>
                 {% if video.is_youtube_video %}<span class="text-label-md text-on-surface-variant">YouTube</span>{% endif %}
                 <span class="text-label-md text-on-surface-variant">{{ video.created_at|date:"M d, Y" }}</span>
             </div>
@@ -87,21 +93,23 @@
             {% endif %}
             <div class="flex gap-sm flex-wrap">
                 {% if video.status == 'completed' %}
-                <a href="{% url 'enhanced_search' %}"
+                <a href="{% url 'home' %}"
                    class="flex-1 py-2 text-center bg-primary text-on-primary rounded-lg text-label-lg hover:opacity-90 transition-opacity">
-                    Analyze
+                    Ask
                 </a>
+                {% if not video.is_document %}
                 <a href="{% url 'transcript_editor' video.job_id %}"
                    class="px-4 py-2 text-center border border-primary/20 text-primary rounded-lg text-label-lg hover:bg-primary/5">
                     Edit Transcript
                 </a>
+                {% endif %}
                 {% elif video.status == 'processing' %}
                 <button type="button" disabled class="flex-1 py-2 bg-primary/20 text-primary cursor-not-allowed rounded-lg text-label-lg">
                     Analyzing...
                 </button>
                 {% endif %}
                 <form method="post" action="{% url 'delete_video' video.job_id %}" class="inline"
-                      onsubmit="return confirm('Delete this video?')">
+                      onsubmit="return confirm('Delete this item from your vault?')">
                     {% csrf_token %}
                     <button type="submit" class="px-4 py-2 border border-error/20 text-error rounded-lg text-label-lg hover:bg-error/5">
                         Delete
@@ -114,10 +122,10 @@
 </div>
 {% else %}
 <div class="luminous-card rounded-xl p-xl text-center">
-    <span class="material-symbols-outlined text-[64px] text-primary/20 mb-md">video_library</span>
-    <h3 class="text-headline-md text-primary mb-sm">No videos yet</h3>
-    <p class="text-on-surface-variant mb-lg">Upload your first video to get started.</p>
-    <a href="{% url 'upload_video' %}" class="inline-flex bg-primary text-on-primary px-lg py-sm rounded-lg font-bold">Upload Video</a>
+    <span class="material-symbols-outlined text-[64px] text-primary/20 mb-md">inventory_2</span>
+    <h3 class="text-headline-md text-primary mb-sm">Your vault is empty</h3>
+    <p class="text-on-surface-variant mb-lg">Upload a PDF, audio, or video to start asking questions.</p>
+    <a href="{% url 'upload_video' %}" class="inline-flex bg-primary text-on-primary px-lg py-sm rounded-lg font-bold">Upload Content</a>
 </div>
 {% endif %}
 

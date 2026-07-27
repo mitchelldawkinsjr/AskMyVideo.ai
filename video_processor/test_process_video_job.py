@@ -18,34 +18,50 @@ class ProcessVideoJobTests(TestCase):
             status=JobStatus.PENDING,
         )
 
-    @patch("video_processor.views.video_processor")
-    def test_marks_job_completed_on_success(self, mock_processor):
-        from . import views
+    @patch("video_processor.jobs.get_processor")
+    def test_marks_job_completed_on_success(self, mock_get_processor):
+        from . import jobs
 
+        mock_processor = MagicMock()
+        mock_get_processor.return_value = mock_processor
         mock_processor.create_comprehensive_media_summary.return_value = {
             "metadata": {"duration": 10},
             "transcription": {"text": "hello"},
             "processing_errors": [],
         }
 
-        views.process_video_job(str(self.job.job_id))
+        jobs.process_video_job(str(self.job.job_id))
 
         self.job.refresh_from_db()
         self.assertEqual(self.job.status, JobStatus.COMPLETED)
         self.assertIsNotNone(self.job.completed_at)
 
-    @patch("video_processor.views.video_processor")
-    def test_marks_job_failed_on_processor_errors(self, mock_processor):
-        from . import views
+    @patch("video_processor.jobs.get_processor")
+    def test_marks_job_failed_on_processor_errors(self, mock_get_processor):
+        from . import jobs
 
+        mock_processor = MagicMock()
+        mock_get_processor.return_value = mock_processor
         mock_processor.create_comprehensive_media_summary.return_value = {
             "metadata": {},
             "transcription": {},
             "processing_errors": ["ffmpeg failed"],
         }
 
-        views.process_video_job(str(self.job.job_id))
+        jobs.process_video_job(str(self.job.job_id))
 
         self.job.refresh_from_db()
         self.assertEqual(self.job.status, JobStatus.FAILED)
         self.assertIn("ffmpeg failed", self.job.error_message)
+
+    def test_requeue_stale_processing_jobs(self):
+        from . import jobs
+
+        self.job.status = JobStatus.PROCESSING
+        self.job.save()
+
+        requeued = jobs.requeue_stale_processing_jobs(max_age_minutes=0)
+
+        self.assertEqual(requeued, 1)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.PENDING)
